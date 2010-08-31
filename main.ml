@@ -20,7 +20,7 @@
 exception NSS_init_failed
 exception NSS_cleanup_failed
 exception NSS_base64_decode_failed of string * int
-exception NSS_decrypt_failed of string * int
+exception NSS_decrypt_failed of string * int * exn option
 
 let () = Callback.register_exception "NSS_init_failed"
   NSS_init_failed
@@ -29,11 +29,11 @@ let () = Callback.register_exception "NSS_cleanup_failed"
 let () = Callback.register_exception "NSS_base64_decode_failed"
   (NSS_base64_decode_failed ("", 0))
 let () = Callback.register_exception "NSS_decrypt_failed"
-  (NSS_decrypt_failed ("", 0))
+  (NSS_decrypt_failed ("", 0, None))
 
 external nss_cleanup : unit -> unit = "caml_nss_cleanup"
 external nss_init : string -> unit = "caml_nss_init"
-external do_decrypt : password:string -> data:string -> string = "caml_do_decrypt"
+external do_decrypt : callback:(bool -> string) -> data:string -> string = "caml_do_decrypt"
 
 let () = at_exit nss_cleanup
 
@@ -41,5 +41,14 @@ let dir = read_line ()
 let password = read_line ()
 let data = read_line () ^ "\n"
 
+let callback retry =
+  if retry then failwith "Invalid password" else password
+
 let () = nss_init dir
-let () = print_endline (do_decrypt ~password ~data)
+let () =
+  try
+    print_endline (do_decrypt ~callback ~data)
+  with
+    | NSS_decrypt_failed(_, _, Some e) ->
+      Printf.eprintf "Error while decrypting: %s\n" (Printexc.to_string e);
+      exit 2

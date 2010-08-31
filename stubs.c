@@ -51,11 +51,24 @@
 #include <caml/fail.h>
 #include <caml/callback.h>
 
+#include <assert.h>
+
 char *password_func(PK11SlotInfo *slot, PRBool retry, void *arg) {
-  if (retry) {
-    return NULL;
+  CAMLparam0();
+  CAMLlocal4(ml_arg, ml_retry, ml_res, ml_exn);
+  ml_arg = *(value *)arg;
+  /* ml_arg : (bool -> string) * exn option */
+  assert(Is_block(ml_arg));
+  ml_retry = retry ? Val_true : Val_false;
+  ml_res = caml_callback_exn(Field(ml_arg, 0), ml_retry);
+  if (Is_exception_result(ml_res)) {
+    /* put (Some exn) in exn slot of arg */
+    ml_exn = caml_alloc_tuple(1);
+    Store_field(ml_exn, 0, Extract_exception(ml_res));
+    Store_field(ml_arg, 1, ml_exn);
+    CAMLreturnT(char *, NULL);
   } else {
-    return PL_strdup(arg);
+    CAMLreturnT(char *, PL_strdup(String_val(ml_res)));
   }
 }
 
@@ -80,10 +93,9 @@ CAMLprim value caml_nss_init(value path) {
   CAMLreturn(Val_unit);
 }
 
-CAMLprim value caml_do_decrypt(value password, value data) {
-  CAMLparam2(password, data);
-  CAMLlocal1(res);
-  char *passwordString = String_val(password);
+CAMLprim value caml_do_decrypt(value callback, value data) {
+  CAMLparam2(callback, data);
+  CAMLlocal3(res, exn, cb_data);
   char *dataString = String_val(data);
   int strLen = caml_string_length(data);
   SECItem *decoded = NSSBase64_DecodeBuffer(NULL, NULL, dataString, strLen);
@@ -102,7 +114,12 @@ CAMLprim value caml_do_decrypt(value password, value data) {
     }
   }
   /* Base64 decoding succeeded */
-  rv = PK11SDR_Decrypt(decoded, &result, passwordString);
+  /* Build the argument to password_func ((bool -> string) * exn option) */
+  cb_data = caml_alloc_tuple(2);
+  Store_field(cb_data, 0, callback);
+  Store_field(cb_data, 1, Val_unit);   /* None */
+  /* Decrypt */
+  rv = PK11SDR_Decrypt(decoded, &result, &cb_data);
   SECITEM_ZfreeItem(decoded, PR_TRUE);
   if (rv == SECSuccess) {
     res = caml_alloc_string(result.len);
@@ -112,8 +129,9 @@ CAMLprim value caml_do_decrypt(value password, value data) {
   }
   /* decryption failed */
   res = Val_int(PORT_GetError());
+  exn = Field(cb_data, 1);
   {
-    value args[] = { data, res };
-    caml_raise_with_args(*caml_named_value("NSS_decrypt_failed"), 2, args);
+    value args[] = { data, res, exn };
+    caml_raise_with_args(*caml_named_value("NSS_decrypt_failed"), 3, args);
   }
 }
