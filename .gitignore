@@ -1,4 +1,4 @@
 *~
 *.o
 *.cm[iox]
-mozilla-passwords
+nss-passwords

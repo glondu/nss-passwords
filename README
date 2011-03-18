@@ -1,5 +1,5 @@
-mozilla-passwords
-=================
+nss-passwords
+=============
 
 This program reads passwords from a Mozilla keyring. It can run
 entirely in text mode. It is merely a higher level version of

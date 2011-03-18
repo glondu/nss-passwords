@@ -5,12 +5,12 @@ ML_LFLAGS = $(foreach u,$(shell pkg-config --libs nss),-ccopt $(u))
 
 .PHONY: all clean
 
-all: mozilla-passwords
+all: nss-passwords
 
 clean:
-	rm -f *~ *.cm[oxi] *.o mozilla-passwords
+	rm -f *~ *.cm[oxi] *.o nss-passwords
 
-mozilla-passwords: main.cmo nss_stubs.o main_stubs.o
+nss-passwords: main.cmo nss_stubs.o main_stubs.o
 	$(OCAMLC) $(ML_LFLAGS) -custom -linkpkg -o $@ $^
 
 %.cmx: %.ml

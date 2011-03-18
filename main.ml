@@ -48,7 +48,7 @@ let spec =  Arg.align [
   "-d", Arg.Set_string dir, "profile directory (default: Firefox default profile)";
   "-p", Arg.Set_string pinentry, "pinentry program to use (default: pinentry)";
 ]
-let usage_msg = "mozilla-passwords [-d <dir>] [-p <pinentry>] query [...]"
+let usage_msg = "nss-passwords [-d <dir>] [-p <pinentry>] query [...]"
 
 exception Found of string
 
