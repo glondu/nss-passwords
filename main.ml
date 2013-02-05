@@ -178,11 +178,9 @@ let () =
       (0, 0, 0)
       results
     in
-    let fmt = Printf.ksprintf
-      (fun fmt -> Scanf.format_from_string fmt "%s %s %s")
-      "| %%-%ds | %%-%ds | %%-%ds |\n" a b c
-    in
-    List.iter (fun (x, y, z) -> Printf.printf fmt x y z) results
+    List.iter (fun (x, y, z) ->
+      Printf.printf "| %-*s | %-*s | %-*s |\n" a x b y c z
+    ) results
   with
     | NSS_decrypt_failed(_, _, Some e) ->
       Printf.eprintf "Error while decrypting: %s\n" (Printexc.to_string e);
