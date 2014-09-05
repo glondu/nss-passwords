@@ -1,0 +1,9 @@
+type login = {
+  hostname : string;
+  encryptedUsername : string;
+  encryptedPassword : string;
+}
+
+type logins = {
+  logins : login list;
+}

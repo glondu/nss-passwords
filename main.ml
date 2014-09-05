@@ -168,9 +168,33 @@ let exec_sqlite () =
   let r = Sqlite3.db_close db in
   assert (r = true)
 
+open Json_types_j
+
+let json_process logins query =
+  let rex = Str.regexp (".*" ^ Str.quote query ^ ".*") in
+  List.iter
+    (fun l ->
+     if Str.string_match rex l.hostname 0 then (
+       let username = do_decrypt ~callback ~data:l.encryptedUsername in
+       let password = do_decrypt ~callback ~data:l.encryptedPassword in
+       results := (l.hostname, username, password) :: !results
+     )
+    ) logins
+
+let exec_json () =
+  let ic = open_in (FilePath.concat !dir "logins.json") in
+  let ls = Yojson.init_lexer () in
+  let lb = Lexing.from_channel ic in
+  let logins = read_logins ls lb in
+  close_in ic;
+  List.iter (json_process logins.logins) !queries
+
 let () =
   try
-    exec_sqlite ();
+    (if Sys.file_exists (FilePath.concat !dir "logins.json")
+     then exec_json ()
+     else exec_sqlite ()
+    );
     let results = List.sort compare !results in
     let (a, b, c) = List.fold_left
       (fun (a, b, c) (x, y, z) ->

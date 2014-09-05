@@ -4,7 +4,7 @@ nss-passwords
 This program reads passwords from a Mozilla keyring. It can run
 entirely in text mode. It is merely a higher level version of
 pwdecrypt, which is no longer convenient for direct use with
-SQLite-based keyrings of recent versions of Firefox.
+SQLite-based and JSON-based keyrings of recent versions of Firefox.
 
 Requirements (versions known to work are between brackets):
  - Mozilla's Network Security Services (NSS) [3.12.6]
@@ -15,6 +15,8 @@ Requirements (versions known to work are between brackets):
      (http://ocaml-fileutils.forge.ocamlcore.org/)
  - ocaml-sqlite3 [1.5.6]
      (http://ocaml.info/home/ocaml_sources.html#ocaml-sqlite3)
+ - atdgen [1.3.1]
+     (http://mjambon.com/atdgen)
  - some pinentry obeying the Assuan protocol
      (e.g. pinentry-curses [0.8.0] from http://www.gnupg.org/aegypten/)
 
@@ -22,6 +24,7 @@ Usage: run with --help option
 
 Tested with:
  - Iceweasel 3.5.11 (should be OK with Firefox of same version)
+ - Iceweasel 32.0 (should be OK with Firefox of same version)
  - Icedove 3.0.6 (should be OK with Thunderbird of same version)
 
  -- Stéphane Glondu <steph@glondu.net>  Tue, 31 Aug 2010 17:58:11 +0200
