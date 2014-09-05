@@ -91,9 +91,6 @@ let () =
   nss_init !dir;
   at_exit nss_cleanup
 
-let db = Sqlite3.db_open (FilePath.concat !dir "signons.sqlite")
-let () = at_exit (fun () -> let r = Sqlite3.db_close db in assert (r = true))
-
 (** Decrypt passwords *)
 
 let check line =
@@ -157,7 +154,7 @@ let process_row = function
     results := (hostname, username, password) :: !results
   | _ -> assert false
 
-let exec query =
+let exec db query =
   let buf = Buffer.create (2 * String.length query + 128) in
   Printf.bprintf buf
     "SELECT hostname, encryptedUsername, encryptedPassword FROM moz_logins WHERE hostname LIKE %a ESCAPE 'x';"
@@ -165,9 +162,15 @@ let exec query =
   let r = Sqlite3.exec_not_null_no_headers ~cb:process_row db (Buffer.contents buf) in
   assert (r = Sqlite3.Rc.OK)
 
+let exec_sqlite () =
+  let db = Sqlite3.db_open (FilePath.concat !dir "signons.sqlite") in
+  List.iter (exec db) !queries;
+  let r = Sqlite3.db_close db in
+  assert (r = true)
+
 let () =
   try
-    List.iter exec !queries;
+    exec_sqlite ();
     let results = List.sort compare !results in
     let (a, b, c) = List.fold_left
       (fun (a, b, c) (x, y, z) ->
