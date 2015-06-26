@@ -36,6 +36,8 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#define NO_NSPR_10_SUPPORT
+
 #include <nspr/nspr.h>
 #include <string.h>
 #include <nss/nss.h>
