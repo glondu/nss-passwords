@@ -30,6 +30,8 @@
  *
  * ***** END LICENSE BLOCK ***** *)
 
+open Json_types_j
+
 (** C interface *)
 
 exception NSS_init_failed
@@ -56,10 +58,12 @@ external ttyname : Unix.file_descr -> string = "caml_ttyname"
 let dir = ref ""
 let pinentry = ref "pinentry"
 let queries = ref []
+let json_output = ref false
 
 let spec =  Arg.align [
   "-d", Arg.Set_string dir, "profile directory (default: Firefox default profile)";
   "-p", Arg.Set_string pinentry, "pinentry program to use (default: pinentry)";
+  "-j", Arg.Set json_output, "output result in JSON";
 ]
 let usage_msg = "nss-passwords [-d <dir>] [-p <pinentry>] query [...]"
 
@@ -151,7 +155,7 @@ let process_row = function
   | [| hostname; encryptedUsername; encryptedPassword |] ->
     let username = do_decrypt ~callback ~data:encryptedUsername in
     let password = do_decrypt ~callback ~data:encryptedPassword in
-    results := (hostname, username, password) :: !results
+    results := {hostname; username; password} :: !results
   | _ -> assert false
 
 let exec db query =
@@ -168,17 +172,16 @@ let exec_sqlite () =
   let r = Sqlite3.db_close db in
   assert (r = true)
 
-open Json_types_j
-
 let json_process logins query =
   let rex = Str.regexp (".*" ^ Str.quote query ^ ".*") in
   List.iter
     (fun l ->
-     if Str.string_match rex l.hostname 0 then (
-       let username = do_decrypt ~callback ~data:l.encryptedUsername in
-       let password = do_decrypt ~callback ~data:l.encryptedPassword in
-       results := (l.hostname, username, password) :: !results
-     )
+      let hostname = l.ihostname in
+      if Str.string_match rex hostname 0 then (
+        let username = do_decrypt ~callback ~data:l.iencryptedUsername in
+        let password = do_decrypt ~callback ~data:l.iencryptedPassword in
+        results := {hostname; username; password} :: !results
+      )
     ) logins
 
 let exec_json () =
@@ -189,6 +192,25 @@ let exec_json () =
   close_in ic;
   List.iter (json_process logins.logins) !queries
 
+let print_as_table results =
+  let (a, b, c) =
+    List.fold_left
+      (fun (a, b, c) o ->
+        let a = max a (String.length o.hostname) in
+        let b = max b (String.length o.username) in
+        let c = max c (String.length o.password) in
+        (a, b, c))
+      (0, 0, 0)
+      results
+  in
+  List.iter
+    (fun o ->
+      Printf.printf "| %-*s | %-*s | %-*s |\n" a o.hostname b o.username c o.password
+    ) results
+
+let print_as_json results =
+  print_endline (string_of_output results)
+
 let () =
   try
     (if Sys.file_exists (FilePath.concat !dir "logins.json")
@@ -196,18 +218,7 @@ let () =
      else exec_sqlite ()
     );
     let results = List.sort compare !results in
-    let (a, b, c) = List.fold_left
-      (fun (a, b, c) (x, y, z) ->
-        let a = max a (String.length x) in
-        let b = max b (String.length y) in
-        let c = max c (String.length z) in
-        (a, b, c))
-      (0, 0, 0)
-      results
-    in
-    List.iter (fun (x, y, z) ->
-      Printf.printf "| %-*s | %-*s | %-*s |\n" a x b y c z
-    ) results
+    (if !json_output then print_as_json else print_as_table) results
   with
     | NSS_decrypt_failed(_, _, Some e) ->
       Printf.eprintf "Error while decrypting: %s\n" (Printexc.to_string e);

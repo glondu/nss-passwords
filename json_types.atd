@@ -2,8 +2,16 @@ type login = {
   hostname : string;
   encryptedUsername : string;
   encryptedPassword : string;
-}
+} <ocaml field_prefix="i">
 
 type logins = {
   logins : login list;
 }
+
+type output_login = {
+  hostname : string;
+  username : string;
+  password : string;
+}
+
+type output = output_login list
