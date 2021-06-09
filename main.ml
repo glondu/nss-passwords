@@ -65,12 +65,30 @@ let spec =  Arg.align [
   "-p", Arg.Set_string pinentry, "pinentry program to use (default: pinentry)";
   "-j", Arg.Set json_output, " output result in JSON";
 ]
-let usage_msg = "nss-passwords [-d <dir>] [-p <pinentry>] query [...]"
+let usage_msg = "\
+nss-passwords [-d <dir>] [-p <pinentry>] query [...]\n\
+A query is either hostname:string, username:string, or string (which\n\
+translates to hostname:string)."
 
 exception Found of string
 
+let chop_prefix ~prefix x =
+  let n = String.length x and nprefix = String.length prefix in
+  if n >= nprefix && String.sub x 0 nprefix = prefix then
+    Some (String.sub x nprefix (n - nprefix))
+  else
+    None
+
+let parse_query x =
+  match chop_prefix ~prefix:"hostname:" x with
+  | Some x -> `Hostname x
+  | None ->
+     match chop_prefix ~prefix:"username:" x with
+     | Some x -> `Username x
+     | None -> `Hostname x
+
 let () =
-  Arg.parse spec (fun x -> queries := x :: !queries) usage_msg;
+  Arg.parse spec (fun x -> queries := parse_query x :: !queries) usage_msg;
   if !queries = [] then begin
     Arg.usage spec usage_msg;
     exit 1
@@ -151,20 +169,39 @@ let quote_query buf x =
 
 let results = ref []
 
-let process_row = function
-  | [| hostname; encryptedUsername; encryptedPassword |] ->
-    let username = do_decrypt ~callback ~data:encryptedUsername in
-    let password = do_decrypt ~callback ~data:encryptedPassword in
-    results := {hostname; username; password} :: !results
-  | _ -> assert false
-
-let exec db query =
+let exec_hostname db query =
+  let cb = function
+    | [| hostname; encryptedUsername; encryptedPassword |] ->
+       let username = do_decrypt ~callback ~data:encryptedUsername in
+       let password = do_decrypt ~callback ~data:encryptedPassword in
+       results := {hostname; username; password} :: !results
+    | _ -> assert false
+  in
   let buf = Buffer.create (2 * String.length query + 128) in
   Printf.bprintf buf
     "SELECT hostname, encryptedUsername, encryptedPassword FROM moz_logins WHERE hostname LIKE %a ESCAPE 'x';"
     quote_query query;
-  let r = Sqlite3.exec_not_null_no_headers ~cb:process_row db (Buffer.contents buf) in
+  let r = Sqlite3.exec_not_null_no_headers ~cb db (Buffer.contents buf) in
   assert (r = Sqlite3.Rc.OK)
+
+let exec_username db query =
+  let rex = Str.regexp (".*" ^ Str.quote query ^ ".*") in
+  let cb = function
+    | [| hostname; encryptedUsername; encryptedPassword |] ->
+       let username = do_decrypt ~callback ~data:encryptedUsername in
+       if Str.string_match rex username 0 then (
+         let password = do_decrypt ~callback ~data:encryptedPassword in
+         results := {hostname; username; password} :: !results
+       )
+    | _ -> assert false
+  in
+  let sql = "SELECT hostname, encryptedUsername, encryptedPassword FROM moz_logins;" in
+  let r = Sqlite3.exec_not_null_no_headers ~cb db sql in
+  assert (r = Sqlite3.Rc.OK)
+
+let exec db = function
+  | `Hostname x -> exec_hostname db x
+  | `Username x -> exec_username db x
 
 let exec_sqlite () =
   let db = Sqlite3.db_open (FilePath.concat !dir "signons.sqlite") in
@@ -173,12 +210,20 @@ let exec_sqlite () =
   assert (r = true)
 
 let json_process logins query =
-  let rex = Str.regexp (".*" ^ Str.quote query ^ ".*") in
+  let string_match =
+    match query with
+    | `Hostname x ->
+       let rex = Str.regexp (".*" ^ Str.quote x ^ ".*") in
+       fun hostname _ -> Str.string_match rex hostname 0
+    | `Username x ->
+       let rex = Str.regexp (".*" ^ Str.quote x ^ ".*") in
+       fun _ username -> Str.string_match rex username 0
+  in
   List.iter
     (fun l ->
       let hostname = l.ihostname in
-      if Str.string_match rex hostname 0 then (
-        let username = do_decrypt ~callback ~data:l.iencryptedUsername in
+      let username = do_decrypt ~callback ~data:l.iencryptedUsername in
+      if string_match hostname username then (
         let password = do_decrypt ~callback ~data:l.iencryptedPassword in
         results := {hostname; username; password} :: !results
       )
