@@ -63,7 +63,7 @@ let json_output = ref false
 let spec =  Arg.align [
   "-d", Arg.Set_string dir, "profile directory (default: Firefox default profile)";
   "-p", Arg.Set_string pinentry, "pinentry program to use (default: pinentry)";
-  "-j", Arg.Set json_output, "output result in JSON";
+  "-j", Arg.Set json_output, " output result in JSON";
 ]
 let usage_msg = "nss-passwords [-d <dir>] [-p <pinentry>] query [...]"
 
