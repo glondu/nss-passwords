@@ -98,7 +98,7 @@ CAMLprim value caml_nss_init(value path) {
 CAMLprim value caml_do_decrypt(value callback, value data) {
   CAMLparam2(callback, data);
   CAMLlocal3(res, exn, cb_data);
-  char *dataString = String_val(data);
+  const char *dataString = String_val(data);
   int strLen = caml_string_length(data);
   SECItem *decoded = NSSBase64_DecodeBuffer(NULL, NULL, dataString, strLen);
   SECStatus rv;
@@ -125,7 +125,7 @@ CAMLprim value caml_do_decrypt(value callback, value data) {
   SECITEM_ZfreeItem(decoded, PR_TRUE);
   if (rv == SECSuccess) {
     res = caml_alloc_string(result.len);
-    memcpy(String_val(res), result.data, result.len);
+    memcpy(Bytes_val(res), result.data, result.len);
     SECITEM_ZfreeItem(&result, PR_FALSE);
     CAMLreturn(res);
   }
