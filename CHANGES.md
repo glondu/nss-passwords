@@ -1,3 +1,10 @@
+0.4 (2023-09-19)
+================
+
+ * Add machine-readable output (GitHub #2)
+ * Add possibility to select the username (GitHub #3)
+ * Fix compilation with OCaml 4.14.1 (GitHub #6)
+
 0.3 (2019-07-25)
 ================
 
