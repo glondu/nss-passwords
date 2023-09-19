@@ -95,8 +95,8 @@ CAMLprim value caml_nss_init(value path) {
   CAMLreturn(Val_unit);
 }
 
-CAMLprim value caml_do_decrypt(value callback, value data) {
-  CAMLparam2(callback, data);
+CAMLprim value caml_do_decrypt(value decrypt_callback, value data) {
+  CAMLparam2(decrypt_callback, data);
   CAMLlocal3(res, exn, cb_data);
   const char *dataString = String_val(data);
   int strLen = caml_string_length(data);
@@ -118,7 +118,7 @@ CAMLprim value caml_do_decrypt(value callback, value data) {
   /* Base64 decoding succeeded */
   /* Build the argument to password_func ((bool -> string) * exn option) */
   cb_data = caml_alloc_tuple(2);
-  Store_field(cb_data, 0, callback);
+  Store_field(cb_data, 0, decrypt_callback);
   Store_field(cb_data, 1, Val_unit);   /* None */
   /* Decrypt */
   rv = PK11SDR_Decrypt(decoded, &result, &cb_data);
