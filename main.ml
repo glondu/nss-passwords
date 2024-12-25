@@ -209,6 +209,9 @@ let exec_sqlite () =
   let r = Sqlite3.db_close db in
   assert (r = true)
 
+let iter_try f l =
+  List.iter (fun x -> try f x with _ -> ()) l
+
 let json_process logins query =
   let string_match =
     match query with
@@ -219,7 +222,7 @@ let json_process logins query =
        let rex = Str.regexp (".*" ^ Str.quote x ^ ".*") in
        fun _ username -> Str.string_match rex username 0
   in
-  List.iter
+  iter_try
     (fun l ->
       let hostname = l.ihostname in
       let username = do_decrypt ~callback ~data:l.iencryptedUsername in
