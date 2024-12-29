@@ -1,3 +1,10 @@
+0.5 (2024-12-29)
+================
+
+ * Switch to dune
+ * Ignore errors while decrypting entries (Debian bug #1091105)
+ * Use ocamlformat
+
 0.4 (2023-09-19)
 ================
 
