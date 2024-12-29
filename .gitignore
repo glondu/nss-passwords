@@ -1,5 +1,2 @@
 *~
-*.o
-*.cm[iox]
-*_[jt].ml*
-nss-passwords
+_build

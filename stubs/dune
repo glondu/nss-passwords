@@ -1,0 +1,11 @@
+(library
+ (name nss_passwords_stubs)
+ (foreign_stubs
+  (language c)
+  (names nss_stubs main_stubs)
+  (flags (-fPIC (:include c_flags.sexp))))
+ (c_library_flags (:include c_library_flags.sexp)))
+
+(rule
+ (targets c_flags.sexp c_library_flags.sexp)
+ (action (run ./config/discover.exe)))
