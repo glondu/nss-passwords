@@ -30,7 +30,22 @@
  *
  * ***** END LICENSE BLOCK ***** *)
 
-open Json_types_j
+open Ppx_yojson_conv_lib.Yojson_conv.Primitives
+
+type login = {
+  hostname : string;
+  encryptedUsername : string;
+  encryptedPassword : string;
+}
+[@@deriving yojson] [@@yojson.allow_extra_fields]
+
+type logins = { logins : login list }
+[@@deriving yojson] [@@yojson.allow_extra_fields]
+
+type output_login = { hostname : string; username : string; password : string }
+[@@deriving yojson]
+
+type output = output_login list [@@deriving yojson]
 
 (** C interface *)
 
@@ -223,11 +238,11 @@ let json_process logins query =
         fun _ username -> Str.string_match rex username 0
   in
   iter_try
-    (fun l ->
-      let hostname = l.ihostname in
-      let username = do_decrypt ~callback ~data:l.iencryptedUsername in
+    (fun (l : login) ->
+      let hostname = l.hostname in
+      let username = do_decrypt ~callback ~data:l.encryptedUsername in
       if string_match hostname username then
-        let password = do_decrypt ~callback ~data:l.iencryptedPassword in
+        let password = do_decrypt ~callback ~data:l.encryptedPassword in
         results := { hostname; username; password } :: !results)
     logins
 
@@ -235,7 +250,7 @@ let exec_json () =
   let ic = open_in (FilePath.concat !dir "logins.json") in
   let ls = Yojson.init_lexer () in
   let lb = Lexing.from_channel ic in
-  let logins = read_logins ls lb in
+  let logins = Yojson.Safe.read_json ls lb |> logins_of_yojson in
   close_in ic;
   List.iter (json_process logins.logins) !queries
 
@@ -255,7 +270,8 @@ let print_as_table results =
         o.password)
     results
 
-let print_as_json results = print_endline (string_of_output results)
+let print_as_json results =
+  print_endline (results |> yojson_of_output |> Yojson.Safe.to_string)
 
 let () =
   try

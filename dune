@@ -1,16 +1,6 @@
 (executable
  (name main)
  (public_name nss-passwords)
- (libraries yojson atdgen-runtime fileutils.str sqlite3 nss_passwords_stubs))
-
-(rule
- (targets json_types_t.ml json_types_t.mli)
- (deps json_types.atd)
- (action
-  (run atdgen -t %{deps})))
-
-(rule
- (targets json_types_j.ml json_types_j.mli)
- (deps json_types.atd)
- (action
-  (run atdgen -j -j-std %{deps})))
+ (libraries ppx_yojson_conv_lib fileutils.str sqlite3 nss_passwords_stubs)
+ (preprocess
+  (pps ppx_yojson_conv)))
