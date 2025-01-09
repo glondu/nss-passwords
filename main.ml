@@ -235,13 +235,14 @@ let json_process logins query =
         fun hostname _ -> Str.string_match rex hostname 0
     | `Username x ->
         let rex = Str.regexp (".*" ^ Str.quote x ^ ".*") in
-        fun _ username -> Str.string_match rex username 0
+        fun _ username -> Str.string_match rex (Lazy.force username) 0
   in
   iter_try
     (fun (l : login) ->
       let hostname = l.hostname in
-      let username = do_decrypt ~callback ~data:l.encryptedUsername in
+      let username = lazy (do_decrypt ~callback ~data:l.encryptedUsername) in
       if string_match hostname username then
+        let username = Lazy.force username in
         let password = do_decrypt ~callback ~data:l.encryptedPassword in
         results := { hostname; username; password } :: !results)
     logins
