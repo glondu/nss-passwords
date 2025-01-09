@@ -1,3 +1,9 @@
+0.6 (2025-01-09)
+================
+
+ * Use ppx_yojson_conv instead of atdgen
+ * Lazily decrypt usernames
+
 0.5 (2024-12-29)
 ================
 
