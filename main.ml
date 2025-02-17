@@ -30,7 +30,7 @@
  *
  * ***** END LICENSE BLOCK ***** *)
 
-open Ppx_yojson_conv_lib.Yojson_conv.Primitives
+open Ppx_yojson_conv_lib.Yojson_conv
 
 type login = {
   hostname : string;
@@ -40,7 +40,20 @@ type login = {
 [@@deriving yojson] [@@yojson.allow_extra_fields]
 
 type logins = { logins : login list }
-[@@deriving yojson] [@@yojson.allow_extra_fields]
+
+let logins_of_yojson : Yojson.Safe.t -> _ = function
+  | `Assoc o when List.mem_assoc "logins" o -> (
+      match List.assoc "logins" o with
+      | `List logins ->
+          let logins =
+            List.filter_map
+              (fun x ->
+                match login_of_yojson x with x -> Some x | exception _ -> None)
+              logins
+          in
+          { logins }
+      | x -> of_yojson_error "logins_of_yojson/logins" x)
+  | x -> of_yojson_error "logins_of_yojson" x
 
 type output_login = { hostname : string; username : string; password : string }
 [@@deriving yojson]
