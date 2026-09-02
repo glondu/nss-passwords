@@ -1,3 +1,8 @@
+0.7 (2026-09-02)
+================
+
+ * Ignore JSON entries that do not have expected format (GitHub #8)
+
 0.6 (2025-01-09)
 ================
 
